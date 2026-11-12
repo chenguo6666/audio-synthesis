@@ -10,24 +10,34 @@
     "preview": "vite preview",
     "start": "npm run build && vite preview --open",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "electron:setup": "node node_modules/electron/install.js",
+    "app": "npm run build && npm run electron:setup && electron .",
+    "dist:win": "npm run build && npm run electron:setup && electron-builder --win nsis --x64 --publish never",
+    "android:sync": "npm run build && cap sync android",
+    "android:apk": "npm run android:sync && cd android && gradlew assembleDebug"
   },
   "license": "MIT",
-  "dependencies": {
+  "devDependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/share": "^8.0.3",
     "@ffmpeg/core": "^0.12.10",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "wavesurfer.js": "^8.0.5"
-  },
-  "devDependencies": {
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
+    "electron": "^45.3.1",
+    "electron-builder": "^26.18.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "wavesurfer.js": "^8.0.5"
   },
   "engines": {
     "node": ">=20.19"
@@ -35,5 +45,34 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/chenguo6666/audio-synthesis.git"
+  },
+  "main": "electron/main.cjs",
+  "author": "chenguo6666",
+  "build": {
+    "appId": "io.github.chenguo6666.audiosynthesis",
+    "productName": "音频剪辑合成",
+    "artifactName": "audio-synthesis-${version}-win-x64-setup.${ext}",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "shortcutName": "音频剪辑合成",
+      "packElevateHelper": false
+    }
   }
 }

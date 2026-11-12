@@ -1,0 +1,99 @@
+name: 构建客户端（Windows / 安卓）
+
+# - 推送到 main：构建安装包，作为 Actions 产物（Artifacts）上传，供测试下载
+# - 推送 v* 标签（如 v0.1.0）：额外发布到 GitHub Releases
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-apps-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run dist:win
+      - name: 冒烟测试（打包后的客户端导入并导出一段测试音频）
+        shell: pwsh
+        run: |
+          node scripts/make-test-wav.mjs smoke.wav 3
+          $env:AUDIO_SMOKE_TEST = (Resolve-Path smoke.wav).Path
+          $exe = Get-ChildItem release/win-unpacked -Filter *.exe | Where-Object { $_.Name -notlike 'Uninstall*' } | Select-Object -First 1
+          $p = Start-Process -FilePath $exe.FullName -PassThru -Wait -RedirectStandardOutput smoke.log
+          Get-Content smoke.log
+          if ($p.ExitCode -ne 0) { throw "冒烟测试失败，退出码 $($p.ExitCode)" }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-installer
+          path: release/*-setup.exe
+          if-no-files-found: error
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci
+      - run: npm run android:sync
+      - name: 构建 APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          mkdir -p out
+          cd android
+          chmod +x gradlew
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/release.keystore"
+            ./gradlew assembleRelease --no-daemon
+            cp app/build/outputs/apk/release/app-release.apk "../out/audio-synthesis-$VERSION-android.apk"
+          else
+            echo "::warning::未配置签名 Secrets，产出 debug 签名的 APK（可安装，但每次构建签名不同，升级需先卸载）"
+            ./gradlew assembleDebug --no-daemon
+            cp app/build/outputs/apk/debug/app-debug.apk "../out/audio-synthesis-$VERSION-android-debug.apk"
+          fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android-apk
+          path: out/*.apk
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: assets
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: assets/*
+          generate_release_notes: true

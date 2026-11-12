@@ -1,0 +1,8 @@
+{
+  "appId": "io.github.chenguo6666.audiosynthesis",
+  "appName": "音频剪辑合成",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  }
+}

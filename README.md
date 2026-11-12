@@ -26,7 +26,12 @@ git clone https://github.com/chenguo6666/audio-synthesis.git && cd audio-synthes
 
 ### 3. Windows 客户端 / 安卓应用
 
-在 [Releases](https://github.com/chenguo6666/audio-synthesis/releases) 页面下载（开发中）。
+在 [Releases](https://github.com/chenguo6666/audio-synthesis/releases) 页面下载：
+
+- `audio-synthesis-x.y.z-win-x64-setup.exe`：Windows 10/11 安装程序（未做代码签名，首次运行时 SmartScreen 可能拦截，点「更多信息 → 仍要运行」）
+- `audio-synthesis-x.y.z-android*.apk`：Android 7.0 及以上，导出文件保存在「文档/音频剪辑合成」目录
+
+每次推送到 main 的构建也可以在 [Actions](https://github.com/chenguo6666/audio-synthesis/actions) 页面的 Artifacts 中下载测试版。
 
 ## 关于「无损」
 
@@ -46,7 +51,23 @@ npm ci          # 安装依赖
 npm run dev     # 开发服务器 http://localhost:5173
 npm test        # 单元测试
 npm run build   # 生产构建，产物在 dist/
+
+npm run app       # 以 Electron 客户端方式运行
+npm run dist:win  # 打包 Windows 安装程序到 release/
+npm run android:sync   # 构建并同步到 android/ 工程（之后可用 Android Studio 打开 android/）
 ```
+
+> 若本机 npm 禁用了安装脚本（`ignore-scripts=true`），上述 Electron 命令会通过 `npm run electron:setup` 显式下载 Electron 运行时。国内网络可设置环境变量 `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/` 加速。
+
+### 发布新版本
+
+修改 `package.json` 中的 `version`，提交后打标签推送即可，CI 会自动构建并发布到 Releases：
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+安卓正式签名（可选）：在仓库 Settings → Secrets 中配置 `ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`；未配置时产出 debug 签名的 APK。
 
 技术栈：Vite + React + TypeScript，[ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm)（浏览器内的 ffmpeg）负责解码、提取和编码，[wavesurfer.js](https://wavesurfer.xyz/) 负责波形与播放。
 
