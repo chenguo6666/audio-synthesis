@@ -1,0 +1,26 @@
+node_modules/
+dist/
+release/
+*.log
+.DS_Store
+
+# 音视频素材（含版权内容）一律不入库
+*.mp3
+*.flac
+*.ogg
+*.wav
+*.m4a
+*.aac
+*.opus
+*.wma
+*.ape
+*.mp4
+*.mkv
+*.mov
+*.avi
+*.flv
+*.webm
+*.kgm
+*.kgma
+*.vpr
+*.ncm
